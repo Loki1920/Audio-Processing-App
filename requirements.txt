@@ -1,0 +1,8 @@
+pytubefix
+git+https://github.com/openai/whisper.git
+jiwer
+yake
+Flask
+streamlit
+langchain_openai
+ffmpeg
