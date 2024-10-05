@@ -3,6 +3,7 @@ git+https://github.com/openai/whisper.git
 jiwer
 yake
 Flask
+ffmpeg-python
 streamlit
 langchain_openai
 ffmpeg
