@@ -139,6 +139,7 @@ if st.button("Process"):
 
         if response.status_code == 200:
             result = response.json()
+            st.write(result)
 
             st.write("### Transcription:")
             st.write(result['transcription'])
