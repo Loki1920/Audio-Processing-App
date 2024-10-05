@@ -31,7 +31,7 @@ def process_youtube():
     url = data.get('url')
 
     try:
-        yt = YouTube(url, on_progress_callback=on_progress)
+        yt = YouTube(url, on_progress_callback=on_progress, use_po_token=True)
         ys = yt.streams.get_audio_only()
 
         # Create a temporary directory
