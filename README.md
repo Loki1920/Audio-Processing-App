@@ -32,5 +32,5 @@ This project is a Audio Processing App that allows users to input a YouTube vide
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/Loki1920/youtube-video-processing-app.git
-cd youtube-video-processing-app
+git clone https://github.com/Loki1920/Audio-Processing-App.git
+cd Audio-Processing-App
