@@ -9,6 +9,8 @@ import tempfile
 import os
 from openai import OpenAI
 from threading import Thread, Event
+import signal 
+import psutil
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -118,12 +120,23 @@ def process_youtube():
     except Exception as e:
         return jsonify({"error": str(e)})
 
+
+# Function to kill the process by port
+def kill_process_on_port(port):
+    for proc in psutil.process_iter():
+        for conn in proc.connections(kind='inet'):
+            if conn.laddr.port == port:
+                proc.send_signal(signal.SIGTERM)  # or signal.SIGKILL
+
+
+
+# Route to stop the server via Flask
 @app.route('/shutdown', methods=['POST'])
 def shutdown():
     shutdown_func = request.environ.get('werkzeug.server.shutdown')
     if shutdown_func:
         shutdown_func()
-    return jsonify({"message": "Flask server is shutting down..."})
+    return jsonify({"message": "Server is shutting down..."})
 
 
 
@@ -179,4 +192,10 @@ if st.button("Stop Server"):
         st.write("Server stopped successfully.")
     else:
         st.write("Failed to stop the server.")
+
+
+# Button to kill all servers running on port 5000
+if st.button("Kill All Servers"):
+    kill_process_on_port(5000)
+    st.write("All servers running on port 5000 are terminated.")
 
