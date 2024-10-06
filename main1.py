@@ -1,6 +1,4 @@
 import streamlit as st
-import requests
-from flask import Flask, request, jsonify
 from pytubefix import YouTube
 from pytubefix.cli import on_progress
 import whisper
@@ -8,30 +6,18 @@ import yake
 import tempfile
 import os
 from openai import OpenAI
-from threading import Thread, Event
-import signal 
 import psutil
-
-# Initialize Flask app
-app = Flask(__name__)
+import signal
 
 # OpenAI API key setup
 api_key = os.getenv("api_key")
-
 client = OpenAI(api_key=api_key)
 
 # Whisper model
 model = whisper.load_model("base")
 
-# Create an event to signal the Flask app to stop
-stop_event = Event()
-
-# Flask route to process YouTube URL
-@app.route('/process_youtube', methods=['POST'])
-def process_youtube():
-    data = request.json
-    url = data.get('url')
-
+# Function to process YouTube URL and perform transcription, summarization, etc.
+def process_youtube(url):
     try:
         yt = YouTube(url, on_progress_callback=on_progress, use_po_token=True)
         ys = yt.streams.get_audio_only()
@@ -45,7 +31,8 @@ def process_youtube():
 
             # Check if the file exists
             if not os.path.exists(audio_file):
-                return jsonify({"error": "File not found: " + audio_file})
+                st.write({"error": "File not found: " + audio_file})
+                return
 
             # Transcribe the audio using Whisper
             result = model.transcribe(audio_file)
@@ -105,64 +92,35 @@ def process_youtube():
                 ],
                 temperature=1
             )
-            
             sentiment = response.choices[0].message.content.strip()
 
             # Return results
-            return jsonify({
+            return {
                 "transcription": final_text,
                 "summary": summary_text,
                 "title": title_text,
                 "keywords": keywords,
                 "sentiment": sentiment
-            })
+            }
 
     except Exception as e:
-        return jsonify({"error": str(e)})
+        st.write({"error": str(e)})
 
-
-# Function to kill the process by port
-def kill_process_on_port(port):
-    for proc in psutil.process_iter():
-        for conn in proc.connections(kind='inet'):
-            if conn.laddr.port == port:
-                proc.send_signal(signal.SIGTERM)  # or signal.SIGKILL
-
-
-
-# Route to stop the server via Flask
-@app.route('/shutdown', methods=['POST'])
-def shutdown():
-    shutdown_func = request.environ.get('werkzeug.server.shutdown')
-    if shutdown_func:
-        shutdown_func()
-    return jsonify({"message": "Server is shutting down..."})
-
-
-
-# Function to run the Flask app
-def run_flask():
-    app.run(debug=False, use_reloader=False)  # Set use_reloader to False to prevent the app from starting twice
-
-# Start the Flask app in a background thread
-flask_thread = Thread(target=run_flask)
-flask_thread.start()
 
 # Streamlit app
 st.title("Audio Processing")
 
+# Input for YouTube URL
 url_input = st.text_input("Enter YouTube Video URL", "")
 
+# Process the video when the button is clicked
 if st.button("Process"):
     if url_input:
-        # Call the Flask API with the YouTube URL
-        api_url = "http://127.0.0.1:5000/process_youtube"
-        response = requests.post(api_url, json={"url": url_input})
+        # Process the YouTube video and get the results
+        result = process_youtube(url_input)
 
-        if response.status_code == 200:
-            result = response.json()
-            #st.write(result)
-
+        if result:
+            # Display the results
             st.write("### Transcription:")
             st.write(result['transcription'])
 
@@ -179,23 +137,19 @@ if st.button("Process"):
             st.write("### Sentiment Analysis:")
             st.write(result['sentiment'])
         else:
-            st.write("Error:", response.json().get("error", "Unknown error occurred"))
+            st.write("Error processing the video.")
     else:
         st.write("Please enter a valid YouTube URL.")
 
-
-# Stop the Flask server using the "Stop Server" button
-if st.button("Stop Server"):
-    shutdown_url = "http://127.0.0.1:5000/shutdown"
-    response = requests.post(shutdown_url)
-    if response.status_code == 200:
-        st.write("Server stopped successfully.")
-    else:
-        st.write("Failed to stop the server.")
+# Function to kill any process running on a specific port (e.g., Flask instances)
+def kill_process_on_port(port):
+    for proc in psutil.process_iter():
+        for conn in proc.connections(kind='inet'):
+            if conn.laddr.port == port:
+                proc.send_signal(signal.SIGTERM)  # or signal.SIGKILL
+                st.write(f"Process running on port {port} has been killed.")
 
 
 # Button to kill all servers running on port 5000
 if st.button("Kill All Servers"):
     kill_process_on_port(5000)
-    st.write("All servers running on port 5000 are terminated.")
-
