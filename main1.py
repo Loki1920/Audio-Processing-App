@@ -118,6 +118,15 @@ def process_youtube():
     except Exception as e:
         return jsonify({"error": str(e)})
 
+@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    shutdown_func = request.environ.get('werkzeug.server.shutdown')
+    if shutdown_func:
+        shutdown_func()
+    return jsonify({"message": "Flask server is shutting down..."})
+
+
+
 # Function to run the Flask app
 def run_flask():
     app.run(debug=False, use_reloader=False)  # Set use_reloader to False to prevent the app from starting twice
@@ -160,4 +169,14 @@ if st.button("Process"):
             st.write("Error:", response.json().get("error", "Unknown error occurred"))
     else:
         st.write("Please enter a valid YouTube URL.")
+
+
+# Stop the Flask server using the "Stop Server" button
+if st.button("Stop Server"):
+    shutdown_url = "http://127.0.0.1:5000/shutdown"
+    response = requests.post(shutdown_url)
+    if response.status_code == 200:
+        st.write("Server stopped successfully.")
+    else:
+        st.write("Failed to stop the server.")
 
